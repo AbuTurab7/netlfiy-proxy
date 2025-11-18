@@ -1,5 +1,4 @@
 export async function handler(event) {
-  // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -14,38 +13,34 @@ export async function handler(event) {
 
   const { type, lat, lng, id, input, place_id } = event.queryStringParameters;
 
-  if (!type) {
-    return {
-      statusCode: 400,
-      headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Missing type parameter" }),
-    };
-  }
-
   let url = "";
 
   switch (type) {
     case "restaurants":
-      url = `https://www.swiggy.com/dapi/restaurants/list/v5?lat=${lat}&lng=${lng}&is-seo-homepage-enabled=true&page_type=DESKTOP_WEB_LISTING`;
+      url = `https://www.swiggy.com/dapi/restaurants/list/v5?lat=${lat}&lng=${lng}`;
       break;
 
     case "menu":
-      url = `https://www.swiggy.com/mapi/menu/pl?page-type=REGULAR_MENU&complete-menu=true&lat=${lat}&lng=${lng}&restaurantId=${id}&submitAction=ENTER`;
+      url = `https://www.swiggy.com/mapi/menu/pl?page-type=REGULAR_MENU&lat=${lat}&lng=${lng}&restaurantId=${id}`;
       break;
 
     case "autocomplete":
-      url = `https://www.swiggy.com/dapi/misc/place-autocomplete?input=${encodeURIComponent(input)}`;
+      url = `https://www.swiggy.com/dapi/misc/place-autocomplete?input=${encodeURIComponent(
+        input
+      )}`;
       break;
 
     case "address-recommend":
-      url = `https://www.swiggy.com/dapi/misc/address-recommend?place_id=${encodeURIComponent(place_id)}`;
+      url = `https://www.swiggy.com/dapi/misc/address-recommend?place_id=${encodeURIComponent(
+        place_id
+      )}`;
       break;
 
     default:
       return {
         statusCode: 400,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: "Invalid type parameter" }),
+        body: JSON.stringify({ error: "Invalid type" }),
       };
   }
 
@@ -53,20 +48,11 @@ export async function handler(event) {
     const response = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.swiggy.com/",
-        "Origin": "https://www.swiggy.com",
-
-        // These are critical for autocomplete
-        "X-Swiggy-Device-ID": "desktop-web",
-        "X-User-Type": "web",
-        "X-Session-ID": "dummy-session",
-
-        // Cookies required for autocomplete
-        "Cookie":
-          "navType=default; fontsLoaded=1; swiggy_jar=web; deviceId=desktop-web",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
+        "Accept": "application/json",
+        // KEY FIX — Swiggy blocks these if present
+        "Origin": null,
+        "Referer": null,
       },
     });
 
@@ -77,8 +63,8 @@ export async function handler(event) {
         statusCode: 500,
         headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({
-          error: "Swiggy returned HTML instead of JSON (blocked)",
-          details: text.slice(0, 200),
+          error: "Swiggy returned HTML (blocked)",
+          preview: text.slice(0, 250),
         }),
       };
     }
@@ -92,7 +78,7 @@ export async function handler(event) {
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Proxy failed", details: err.message }),
+      body: JSON.stringify({ error: "Proxy error", details: err.message }),
     };
   }
 }
