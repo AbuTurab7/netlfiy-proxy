@@ -50,37 +50,43 @@ export async function handler(event) {
   }
 
   try {
-    // Required headers for Swiggy autocomplete + address API
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://www.swiggy.com/",
-        "X-Device-Id": "web",
-        "Cookie": "swiggy_jar=web",
+        "Origin": "https://www.swiggy.com",
+
+        // These are critical for autocomplete
+        "X-Swiggy-Device-ID": "desktop-web",
+        "X-User-Type": "web",
+        "X-Session-ID": "dummy-session",
+
+        // Cookies required for autocomplete
+        "Cookie":
+          "navType=default; fontsLoaded=1; swiggy_jar=web; deviceId=desktop-web",
       },
     });
 
-    // Some Swiggy APIs return HTML if blocked — detect that
     const text = await response.text();
 
     if (text.startsWith("<")) {
-      // HTML → not JSON → Swiggy blocked request
       return {
         statusCode: 500,
         headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({
-          error: "Swiggy returned HTML instead of JSON",
-          details: "Likely rate limited or headers missing",
+          error: "Swiggy returned HTML instead of JSON (blocked)",
+          details: text.slice(0, 200),
         }),
       };
     }
 
-    const data = JSON.parse(text);
-
     return {
       statusCode: 200,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify(data),
+      body: text,
     };
   } catch (err) {
     return {
